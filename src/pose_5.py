@@ -62,39 +62,41 @@ def minimize_marginals(graph, initial_estimate, pose_options):
     return best_pose, best_landmark, sum_of_marginals
 
 def minimize_errors(graph, initial_estimate, pose_options):
-    #TODO: try different pose and landmark options here, and keep the one with the lowest resulting error.
 
-    # TODO: create a list of errors (each index corresponds to a pose) and add the error of each pose to the list
-    # TODO: compute the sum of the errors and return it along with the best pose and landmark
-    true_poses = {X(1): gtsam.Pose2(0, 0, 0), 
-                  X(2): gtsam.Pose2(2, 0, 0), 
-                  X(3): gtsam.Pose2(4, 0, 0)}
 
     best_pose = None
     best_landmark = None
-    min_sum_of_errors = float('inf')
+    best_sum = float('inf')
 
-    for pose_nr, pose_5 in pose_options.items():
+    ground_truth = {
+        X(1): gtsam.Pose2(0.0, 0.0, 0.0),
+        X(2): gtsam.Pose2(2.0, 0.0, 0.0),
+        X(3): gtsam.Pose2(4.0, 0.0, 0.0),
+    }
+
+    for pose_label, pose_5 in pose_options.items():
         for landmark in [1, 2]:
-            gr = gtsam.NonlinearFactorGraph(graph)
+            g = gtsam.NonlinearFactorGraph(graph)
             est = gtsam.Values(initial_estimate)
-            gr, est = add_pose(gr, est, pose_5)
-            result = optimize(gr, est)
-            gr = add_landmark_measurement(gr, result, pose_5, landmark)
-            result = optimize(gr, est)
+
+            g, est = add_pose(g, est, pose_5)
+            result = optimize(g, est)
+            g = add_landmark_measurement(g, result, pose_5, landmark)
+            result = optimize(g, est)
 
             list_of_errors = []
-            for pose_key, true_pose in true_poses.items():
-                estimated_pose = result.atPose2(pose_key)
-                error = estimated_pose.between(true_pose)
-                list_of_errors.append(error)
-                print(estimated_pose, true_pose, error)
-                
-            sum_of_errors = sum( list_of_errors)
-            if sum_of_errors < min_sum_of_errors:
-                min_sum_of_errors = sum_of_errors
-                best_pose = pose_nr
+            for key, gt in ground_truth.items():
+                estimated = result.atPose2(key)
+                dx = estimated.x() - gt.x()
+                dy = estimated.y() - gt.y()
+                dtheta = estimated.theta() - gt.theta()
+                list_of_errors.append(abs(dx) + abs(dy) + abs(dtheta))
+
+            sum_of_errors = sum(list_of_errors) 
+            if sum_of_errors < best_sum:
+                best_sum = sum_of_errors
+                best_pose = pose_label
                 best_landmark = landmark
 
- 
-    return best_pose, best_landmark, sum_of_errors 
+
+    return best_pose, best_landmark, best_sum
