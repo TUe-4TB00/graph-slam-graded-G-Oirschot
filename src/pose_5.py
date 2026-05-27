@@ -68,7 +68,7 @@ def minimize_errors(graph, initial_estimate, pose_options):
     best_landmark = None
     best_sum = float('inf')
 
-    ground_truth = {
+    true_poses = {
         X(1): gtsam.Pose2(0.0, 0.0, 0.0),
         X(2): gtsam.Pose2(2.0, 0.0, 0.0),
         X(3): gtsam.Pose2(4.0, 0.0, 0.0),
@@ -85,7 +85,7 @@ def minimize_errors(graph, initial_estimate, pose_options):
             result = optimize(g, est)
 
             list_of_errors = []
-            for key, gt in ground_truth.items():
+            for key, gt in true_poses.items():
                 estimated = result.atPose2(key)
                 dx = estimated.x() - gt.x()
                 dy = estimated.y() - gt.y()
