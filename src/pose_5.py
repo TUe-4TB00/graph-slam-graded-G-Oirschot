@@ -63,16 +63,38 @@ def minimize_marginals(graph, initial_estimate, pose_options):
 
 def minimize_errors(graph, initial_estimate, pose_options):
     #TODO: try different pose and landmark options here, and keep the one with the lowest resulting error.
-    best_pose = "a"      # chosen pose option
-    best_landmark = 1    # chosen landmark (1 or 2)
-    pose_5 = pose_options[best_pose]
-    graph, initial_estimate = add_pose(graph, initial_estimate, pose_5)
-    result = optimize(graph, initial_estimate)
-    graph = add_landmark_measurement(graph, result, pose_5, best_landmark)
-    result = optimize(graph, initial_estimate)
 
     # TODO: create a list of errors (each index corresponds to a pose) and add the error of each pose to the list
-    list_of_errors = []
     # TODO: compute the sum of the errors and return it along with the best pose and landmark
-    sum_of_errors = 0
+    true_poses = {X(1): gtsam.Pose2(0, 0, 0), 
+                  X(2): gtsam.Pose2(2, 0, 0), 
+                  X(3): gtsam.Pose2(4, 0, 0)}
+
+    best_pose = None
+    best_landmark = None
+    min_sum_of_errors = float('inf')
+
+    for pose_nr, pose_5 in pose_options.items():
+        for landmark in [1, 2]:
+            gr = gtsam.NonlinearFactorGraph(graph)
+            est = gtsam.Values(initial_estimate)
+            gr, est = add_pose(gr, est, pose_5)
+            result = optimize(gr, est)
+            gr = add_landmark_measurement(gr, result, pose_5, landmark)
+            result = optimize(gr, est)
+
+            list_of_errors = []
+            for pose_key, true_pose in true_poses.items():
+                estimated_pose = result.atPose2(pose_key)
+                error = estimated_pose.between(true_pose)
+                list_of_errors.append(error)
+                print(estimated_pose, true_pose, error)
+                
+            sum_of_errors = sum( list_of_errors)
+            if sum_of_errors < min_sum_of_errors:
+                min_sum_of_errors = sum_of_errors
+                best_pose = pose_nr
+                best_landmark = landmark
+
+ 
     return best_pose, best_landmark, sum_of_errors 
